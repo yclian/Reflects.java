@@ -11,7 +11,11 @@ import static org.junit.Assert.assertTrue;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import org.junit.Test;
 
@@ -22,9 +26,15 @@ import org.junit.Test;
  */
 public class ReflectsTest {
 
+    @Retention(RetentionPolicy.RUNTIME)
+    static @interface Annotation {
+        String value() default "";
+    }
+
     @SuppressWarnings("unused")
     static interface Interface extends Serializable {
 
+        @Annotation("foo")
         void Method();
     }
 
@@ -34,6 +44,7 @@ public class ReflectsTest {
 
         private static void PrivateStaticMethod() {}
 
+        @Annotation("bar")
         @Deprecated
         @Override public void Method() {}
     }
@@ -91,8 +102,15 @@ public class ReflectsTest {
     @Test
     @SuppressWarnings({"deprecation"})
     public void testOnAnnotations() throws Exception {
+
         assertTrue(onClass(AnnotatedClass.class).onAnnotations().transform(annotationToClass()).contains(Deprecated.class));
         assertTrue(onClass(AnnotatedClass.class).onAnnotations().transform(annotationToClass()).contains(Nullable.class));
         assertFalse("SuppressWarnings uses SOURCE retention policy and should not be detectable during runtime!", onClass(AnnotatedClass.class).onAnnotations().transform(annotationToClass()).contains(SuppressWarnings.class));
+    }
+
+    @Test
+    public void testOnMethodsOnAnnotations() {
+        assertEquals("bar", ((Annotation) onClass(Class.class).onMethods().onAnnotations(true).filter(".*\\$Annotation").get(0)).value());
+        assertEquals("foo", ((Annotation) onClass(Class.class).onMethods().onAnnotations(true).filter(".*\\$Annotation").get(1)).value());
     }
 }

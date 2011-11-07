@@ -1,5 +1,7 @@
 package my.jug.reflects;
 
+import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
 import static java.util.Arrays.asList;
 import static my.jug.reflects.Reflects.Predicates.methodOfSignature;
 import static my.jug.reflects.Reflects.Predicates.publicMethod;
@@ -27,6 +29,20 @@ public abstract class Reflects {
 
     protected Reflects() {}
 
+    private static interface HasMethods {
+
+        OnMethods onMethods();
+
+        OnMethods onMethods(boolean includeInherited, boolean includeNonPublic, boolean includeStatic, boolean includeInterfaces);
+    }
+
+    private static interface HasAnnotations {
+
+        OnAnnotations onAnnotations();
+        
+        OnAnnotations onAnnotations(boolean includeInherited);
+    }
+
     private static interface OnCollection<E> {
 
         /**
@@ -38,11 +54,10 @@ public abstract class Reflects {
 
         /**
          * Seek (for one, and first found) element given a {@link Predicate}.
-         *
          * @param predicate
          * @return
          */
-        E seek(Predicate<E> predicate);
+        E seek(Predicate<? super E> predicate);
 
         /**
          * @see Collections2#filter(java.util.Collection, com.google.common.base.Predicate)
@@ -56,7 +71,7 @@ public abstract class Reflects {
          * @param predicate
          * @return
          */
-        List<E> filter(Predicate<E> predicate);
+        List<E> filter(Predicate<? super E> predicate);
 
         /**
          * @see Collections2#transform(java.util.Collection, com.google.common.base.Function)
@@ -64,7 +79,7 @@ public abstract class Reflects {
          * @param <O>
          * @return
          */
-        <O> List<O> transform(final Function<E, O> f);
+        <O> List<O> transform(final Function<? super E, O> f);
     }
 
     private static interface AnnotatableCollection<E> extends OnCollection<E> {
@@ -89,7 +104,7 @@ public abstract class Reflects {
      */
     public static class OnPackages {}
 
-    public static class OnClass {
+    public static class OnClass implements HasMethods, HasAnnotations {
 
         private Class<?> c;
 
@@ -191,23 +206,6 @@ public abstract class Reflects {
             }
         }
 
-        public <A extends Annotation> OnAnnotations<A> onAnnotations () {
-            return onAnnotations(true);
-        }
-
-        public OnAnnotations onAnnotations (boolean includeInherited) {
-
-            List<Annotation> annotations = new ArrayList<Annotation>();
-
-            exportElements(annotations, c.getDeclaredAnnotations());
-            if (includeInherited) {
-                for (Class<?> c: onClasses(true, false).get()) {
-                    exportElements(annotations, c.getDeclaredAnnotations());
-                }
-            }
-
-            return Reflects.onAnnotations(annotations);
-        }
 
         private List<Class<?>> getInterfaces(boolean includeInherited, boolean includeSelf) {
 
@@ -245,9 +243,29 @@ public abstract class Reflects {
                 }
             }
         }
+
+        @Override
+        public OnAnnotations onAnnotations() {
+            return onAnnotations(true);
+        }
+
+        @Override
+        public OnAnnotations onAnnotations(boolean includeInherited) {
+
+            List<Annotation> annotations = new ArrayList<Annotation>();
+
+            exportElements(annotations, c.getDeclaredAnnotations());
+            if (includeInherited) {
+                for (Class<?> c: onClasses(true, false).get()) {
+                    exportElements(annotations, c.getDeclaredAnnotations());
+                }
+            }
+
+            return Reflects.onAnnotations(annotations);
+        }
     }
 
-    public static class OnClasses implements AnnotatableCollection<Class<?>> {
+    public static class OnClasses implements AnnotatableCollection<Class<?>>, HasMethods, HasAnnotations {
 
         private List<Class<?>> classes;
 
@@ -255,12 +273,27 @@ public abstract class Reflects {
             this.classes = classes;
         }
 
-        public OnMethods onMethods(boolean includeInherited, boolean includeNonPublic) {
+        @Override
+        public OnMethods onMethods() {
+            return onMethods(true, false, false, false);
+        }
+
+        public OnMethods onMethods(boolean includeInherited, boolean includeNonPublic, boolean includeStatic, boolean includeInterfaces) {
             List<Method> r = new ArrayList<Method>();
             for (Class<?> c: classes) {
-                r.addAll(Reflects.onClass(c).onMethods(includeInherited, includeNonPublic, false, false).get());
+                r.addAll(Reflects.onClass(c).onMethods(includeInherited, includeNonPublic, includeStatic, includeInterfaces).get());
             }
             return Reflects.onMethods(r);
+        }
+
+        @Override
+        public OnAnnotations onAnnotations() {
+            return onAnnotations(true);
+        }
+
+        @Override
+        public OnAnnotations onAnnotations(boolean includeInherited) {
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -269,7 +302,7 @@ public abstract class Reflects {
         }
 
         @Override
-        public Class<?> seek(Predicate predicate) {
+        public Class<?> seek(Predicate<? super Class<?>> predicate) {
             return seekElement(classes, predicate);
         }
 
@@ -286,17 +319,44 @@ public abstract class Reflects {
         }
 
         @Override
-        public List<Class<?>> filter(Predicate predicate) {
+        public List<Class<?>> filter(Predicate<? super Class<?>> predicate) {
             return filterAsList(classes, predicate);
         }
 
         @Override
-        public <O> List<O> transform(Function<Class<?>, O> f) {
+        public <O> List<O> transform(Function<? super Class<?>, O> f) {
             return transformAsList(classes, f);
         }
     }
 
-    public static class OnMethods implements AnnotatableCollection<Method> {
+    public static class OnMethod implements HasAnnotations {
+
+        Method method;
+
+        OnMethod(Method method) {
+            this.method = method;
+        }
+
+        @Override
+        public OnAnnotations onAnnotations() {
+            return onAnnotations(true);
+        }
+
+        @Override
+        public OnAnnotations onAnnotations(boolean includeInherited) {
+            if (includeInherited) {
+                List<Annotation> r = new ArrayList<Annotation>();
+                for (Method m: Reflects.onClass(method.getDeclaringClass()).onMethods(true, !isPublic(method.getModifiers()), isStatic(method.getModifiers()), true).get()) {
+                    exportElements(r, m.getDeclaredAnnotations());
+                }
+                return Reflects.onAnnotations(r);
+            } else {
+                return Reflects.onAnnotations(method.getDeclaredAnnotations());
+            }
+        }
+    }
+
+    public static class OnMethods implements AnnotatableCollection<Method>, HasAnnotations {
 
         List<Method> methods;
 
@@ -304,7 +364,21 @@ public abstract class Reflects {
             this.methods = methods;
         }
 
-        public <O> List<O> transform(Function<Method, O> f) {
+        @Override
+        public OnAnnotations onAnnotations() {
+            return onAnnotations(true);
+        }
+
+        @Override
+        public OnAnnotations onAnnotations(boolean includeInherited) {
+            Set<Annotation> r = new LinkedHashSet<Annotation>();
+            for (Method m: methods) {
+                r.addAll(Reflects.onMethod(m).onAnnotations(includeInherited).get());
+            }
+            return Reflects.onAnnotations(new ArrayList<Annotation>(r));
+        }
+
+        public <O> List<O> transform(Function<? super Method, O> f) {
             return transformAsList(methods, f);
         }
 
@@ -313,7 +387,7 @@ public abstract class Reflects {
         }
 
         @Override
-        public Method seek(Predicate predicate) {
+        public Method seek(Predicate<? super Method> predicate) {
             return seekElement(methods, predicate);
         }
 
@@ -327,43 +401,43 @@ public abstract class Reflects {
             }});
         }
 
-        public List<Method> filter(Predicate predicate) {
+        public List<Method> filter(Predicate<? super Method> predicate) {
             return filterAsList(methods, predicate);
         }
     }
 
-    public static class OnAnnotations<A extends Annotation> implements OnCollection<A> {
+    public static class OnAnnotations implements OnCollection<Annotation> {
 
-        private List<A> annotations;
+        private List<Annotation> annotations;
 
-        OnAnnotations(List<A> annotations) {
+        OnAnnotations(List<Annotation> annotations) {
             this.annotations = annotations;
         }
 
         @Override
-        public List<A> get() {
+        public List<Annotation> get() {
             return annotations;
         }
 
         @Override
-        public A seek(Predicate<A> predicate) {
+        public Annotation seek(Predicate<? super Annotation> predicate) {
             return seekElement(annotations, predicate);
         }
 
         @Override
-        public List<A> filter(final String regex) {
+        public List<Annotation> filter(final String regex) {
             return filter(new Predicate<Annotation>() { @Override public boolean apply(@Nullable Annotation a) {
                 return a != null && a.annotationType().getName().matches(regex);
             }});
         }
 
         @Override
-        public List<A> filter(Predicate predicate) {
+        public List<Annotation> filter(Predicate<? super Annotation> predicate) {
             return filterAsList(annotations, predicate);
         }
 
         @Override
-        public <O> List<O> transform(Function<A, O> f) {
+        public <O> List<O> transform(Function<? super Annotation, O> f) {
             return transformAsList(annotations, f);
         }
     }
@@ -374,16 +448,16 @@ public abstract class Reflects {
     public static final class Predicates {
 
         private static final Predicate<Method> PUBLIC_METHOD = new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
-            return null != m && Modifier.isPublic(m.getModifiers());
+            return null != m && isPublic(m.getModifiers());
         }};
         private static final Predicate<Method> OBJECT_METHOD = new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
             return null != m && m.getDeclaringClass().equals(Object.class);
         }};
         private static final Predicate<Method> INSTANCE_METHOD = new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
-            return null != m && !Modifier.isStatic(m.getModifiers());
+            return null != m && !isStatic(m.getModifiers());
         }};
         private static final Predicate<Method> STATIC_METHOD = new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
-            return null != m && Modifier.isStatic(m.getModifiers());
+            return null != m && isStatic(m.getModifiers());
         }};
 
         public static Predicate<Class<?>> classAnnotatedWith(final Class<? extends Annotation> annotation) {
@@ -510,7 +584,9 @@ public abstract class Reflects {
         return new OnClasses(classes);
     }
 
-    public static OnMethods onMethod(Method method) { throw new UnsupportedOperationException(); }
+    public static OnMethod onMethod(Method method) {
+        return new OnMethod(method);
+    }
 
     public static OnMethods onMethods(Method... methods) {
         return onMethods(asList(methods));
@@ -532,11 +608,11 @@ public abstract class Reflects {
 
     public static OnPackages onPackages(String... pkgs) { throw new UnsupportedOperationException(); }
 
-    private static <E> boolean exportElements(Collection<E> c, E... elements) {
+    private static <E> boolean exportElements(Collection<? super E> c, E... elements) {
         return Collections.addAll(c, elements);
     }
 
-    private static <I, O> List<O> transformAsList(List<I> l, final Function<I, O> f) {
+    private static <I, O> List<O> transformAsList(List<I> l, final Function<? super I, O> f) {
         java.util.Collection r = Collections2.transform(l, f);
         return r instanceof List ? (List<O>) r : new ArrayList<O>(r);
     }
@@ -547,12 +623,12 @@ public abstract class Reflects {
         }});
     }
 
-    private static <E> List<E> filterAsList(final List<E> l, final Predicate<E> p) {
+    private static <E> List<E> filterAsList(final List<E> l, final Predicate<? super E> p) {
         java.util.Collection r = Collections2.filter(l, p);
         return r instanceof List ? (List<E>) r : new ArrayList<E>(r);
     }
 
-    private static <E> E seekElement(final Collection<E> c, Predicate<E> p) {
+    private static <E> E seekElement(final Collection<E> c, Predicate<? super E> p) {
         for (E e: c) {
             if (p.apply(e)) {
                 return e;
