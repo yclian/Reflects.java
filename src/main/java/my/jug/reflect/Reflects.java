@@ -1,6 +1,7 @@
 package my.jug.reflect;
 
 import static java.util.Arrays.asList;
+import static my.jug.reflect.Reflects.Predicates.methodOfSignature;
 import static my.jug.reflect.Reflects.Predicates.publicMethod;
 import static my.jug.reflect.Reflects.Predicates.staticMethod;
 
@@ -385,9 +386,46 @@ public abstract class Reflects {
             return null != m && Modifier.isStatic(m.getModifiers());
         }};
 
-        public static Predicate<Method> methodOfName(final String name) {
+        public static Predicate<Class<?>> classAnnotatedWith(final Class<? extends Annotation> annotation) {
+            return new Predicate<Class<?>>() { @Override public boolean apply(@Nullable Class<?> c) {
+                return null != c && c.isAnnotationPresent(annotation);
+            }};
+        }
+
+        public static Predicate<Class<?>> classOfName(final String regex) {
+            return new Predicate<Class<?>>() { @Override public boolean apply(@Nullable Class<?> c) {
+                return null != c && c.getName().matches(regex);
+            }};
+        }
+
+        public static Predicate<Method> methodAnnotatedWith(final Class<? extends Annotation> annotation) {
             return new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
-                return m.getName().equals(name);
+                return null != m && m.isAnnotationPresent(annotation);
+            }};
+        }
+
+        public static Predicate<Method> methodOfName(final String regex) {
+            return new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
+                return null != m && m.getName().matches(regex);
+            }};
+        }
+
+        public static Predicate<Method> methodOfSignature(final Method m) {
+            return methodOfSignature(m.getName(), m.getReturnType(), m.getParameterTypes());
+        }
+
+        public static Predicate<Method> methodOfSignature(final String name, final Class<?> returnType, final Class... parameterTypes) {
+            return new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
+                if (null != m && name.equals(m.getName()) && returnType.equals(m.getReturnType()) && parameterTypes.length == m.getParameterTypes().length) {
+                    final Class<?>[] p = m.getParameterTypes();
+                    for (int i = 0; i < p.length; i++) {
+                        if (!parameterTypes[i].equals(p[i])) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+                return false;
             }};
         }
 

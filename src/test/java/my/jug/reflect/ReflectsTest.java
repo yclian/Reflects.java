@@ -34,6 +34,7 @@ public class ReflectsTest {
 
         private static void PrivateStaticMethod() {}
 
+        @Deprecated
         @Override public void Method() {}
     }
 
@@ -61,6 +62,16 @@ public class ReflectsTest {
     @Test
     public void testOnMethodOfName() {
         assertEquals(1, onClass(Class.class).onMethods().filter(methodOfName("Method")).size());
+    }
+
+    @Test
+    public void testOnMethodAnnotatedWith() {
+        assertEquals(1, onClass(Class.class).onMethods().filter(methodAnnotatedWith(Deprecated.class)).size());
+    }
+
+    @Test
+    public void testOnMethodOfSignature() {
+        assertEquals(1, onClass(Class.class).onMethods().filter(methodOfSignature("Method", void.class)).size());
     }
 
     @Test
