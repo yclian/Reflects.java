@@ -1,3 +1,5 @@
+require 'buildr-dependency-extensions'
+
 repositories.remote << 'http://repo1.maven.org/maven2/'
 
 THIS_VERSION = "1.0-SNAPSHOT"
@@ -9,13 +11,14 @@ MOCKITO = 'org.mockito:mockito-all:jar:1.9.0-rc1'
 
 desc 'Awesome reflection utilities'
 define 'reflect' do
-  project.version = THIS_VERSION
-  project.group = 'my.jug'
-  compile.options.target = '1.7'
-  compile.options.target = '1.6'
-  compile.with GUAVA, SLF4J
-  test.with JUNIT, MOCKITO
-  package :jar
-  package :sources
-  package :javadoc
+    extend PomGenerator
+    project.version = THIS_VERSION
+    project.group = 'my.jug'
+    compile.options.target = '1.7'
+    compile.options.target = '1.6'
+    compile.with GUAVA, SLF4J
+    test.with JUNIT, MOCKITO
+    package :jar
+    package :sources
+    package :javadoc
 end
