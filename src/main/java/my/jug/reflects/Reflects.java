@@ -1,9 +1,9 @@
-package my.jug.reflect;
+package my.jug.reflects;
 
 import static java.util.Arrays.asList;
-import static my.jug.reflect.Reflects.Predicates.methodOfSignature;
-import static my.jug.reflect.Reflects.Predicates.publicMethod;
-import static my.jug.reflect.Reflects.Predicates.staticMethod;
+import static my.jug.reflects.Reflects.Predicates.methodOfSignature;
+import static my.jug.reflects.Reflects.Predicates.publicMethod;
+import static my.jug.reflects.Reflects.Predicates.staticMethod;
 
 import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;

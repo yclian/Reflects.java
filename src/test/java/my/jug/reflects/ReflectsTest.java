@@ -1,10 +1,10 @@
-package my.jug.reflect;
+package my.jug.reflects;
 
 import static com.google.common.base.Predicates.and;
 import static com.google.common.base.Predicates.not;
-import static my.jug.reflect.Reflects.Functions.*;
-import static my.jug.reflect.Reflects.Predicates.*;
-import static my.jug.reflect.Reflects.onClass;
+import static my.jug.reflects.Reflects.Functions.*;
+import static my.jug.reflects.Reflects.Predicates.*;
+import static my.jug.reflects.Reflects.onClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
