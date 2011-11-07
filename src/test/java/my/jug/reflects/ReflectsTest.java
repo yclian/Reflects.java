@@ -51,7 +51,7 @@ public class ReflectsTest {
 
     @Test
     public void testOnClassByName() throws ClassNotFoundException {
-        onClass("my.jug.reflect.ReflectsTest$Interface");
+        onClass("my.jug.reflects.ReflectsTest$Interface");
     }
 
     @Test(expected = ClassNotFoundException.class)
