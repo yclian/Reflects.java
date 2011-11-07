@@ -10,10 +10,10 @@ JUNIT = 'junit:junit:jar:4.9'
 MOCKITO = 'org.mockito:mockito-all:jar:1.9.0-rc1'
 
 desc 'Awesome reflection utilities'
-define 'reflect' do
+define 'reflects' do
     extend PomGenerator
     project.version = THIS_VERSION
-    project.group = 'my.jug'
+    project.group = 'my.jug.reflects'
     compile.options.target = '1.7'
     compile.options.target = '1.6'
     compile.with GUAVA, SLF4J
