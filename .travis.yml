@@ -1,4 +1,4 @@
 rvm: 1.8.7
-env: JAVA_HOME=/usr/lib/jvm/java-6-sun
+env: JAVA_HOME=/usr
 script: "bundle exec buildr clean package"
 
