@@ -59,6 +59,11 @@ public class ReflectsTest {
     }
 
     @Test
+    public void testOnMethodOfName() {
+        assertEquals(1, onClass(Class.class).onMethods().filter(methodOfName("Method")).size());
+    }
+
+    @Test
     public void testOnPublicNonObjectInstanceMethods() {
         assertEquals(1, onClass(Class.class).onMethods().filter(and(publicMethod(), instanceMethod(), not(objectMethod()))).size());
     }

@@ -367,6 +367,9 @@ public abstract class Reflects {
         }
     }
 
+    /**
+     * Factory for common {@link Predicate}.
+     */
     public static final class Predicates {
 
         private static final Predicate<Method> PUBLIC_METHOD = new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
@@ -382,10 +385,27 @@ public abstract class Reflects {
             return null != m && Modifier.isStatic(m.getModifiers());
         }};
 
-        public static Predicate<Method> instanceMethod() { return INSTANCE_METHOD; }
-        public static Predicate<Method> publicMethod() { return PUBLIC_METHOD; }
-        public static Predicate<Method> objectMethod() { return OBJECT_METHOD; }
-        public static Predicate<Method> staticMethod() { return STATIC_METHOD; }
+        public static Predicate<Method> methodOfName(final String name) {
+            return new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
+                return m.getName().equals(name);
+            }};
+        }
+
+        public static Predicate<Method> instanceMethod() {
+            return INSTANCE_METHOD;
+        }
+
+        public static Predicate<Method> publicMethod() {
+            return PUBLIC_METHOD;
+        }
+
+        public static Predicate<Method> objectMethod() {
+            return OBJECT_METHOD;
+        }
+
+        public static Predicate<Method> staticMethod() {
+            return STATIC_METHOD;
+        }
     }
 
     public static final class Functions {
@@ -397,8 +417,13 @@ public abstract class Reflects {
             return a.annotationType();
         }};
 
-        public static Function<Class<?>, String> classToName() { return classToName; }
-        public static Function<Annotation, Class<? extends Annotation>> annotationToClass() { return annotationToClass; }
+        public static Function<Class<?>, String> classToName() {
+            return classToName;
+        }
+
+        public static Function<Annotation, Class<? extends Annotation>> annotationToClass() {
+            return annotationToClass;
+        }
     }
 
     /**
