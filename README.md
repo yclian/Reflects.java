@@ -1,0 +1,13 @@
+Reflects.java
+=============
+
+BuildR
+------
+
+This project uses [BuildR] [1], a build system for Java application to replace 
+Maven 2. If you're using Windows, we recommend you to use pik and read [this 
+problem] [2].
+
+[1]: http://buildr.apache.org/installing.html
+[2]: http://stackoverflow.com/questions/6897340/unable-to-run-buildr-on-windows/8031575#8031575   "StackOverflow - Unable to run BuildR on Windows"
+
