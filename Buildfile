@@ -1,6 +1,6 @@
 repositories.remote << 'http://repo1.maven.org/maven2/'
 
-THIS_VERSION = "1.0"
+THIS_VERSION = "1.1-SNAPSHOT"
 
 GUAVA = transitive('com.google.guava:guava:jar:10.0.1')
 SLF4J = ['org.slf4j:slf4j-api:jar:1.6.1'] << transitive('org.slf4j:slf4j-log4j12:jar:1.6.1')
