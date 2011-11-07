@@ -10,8 +10,8 @@ problem] [2].
 
 To begin, make sure Ruby, gem, bundler, etc. are ready.
 
- bundle install
- buildr --help
+    bundle install
+    buildr --help
 
 Use
 ---
