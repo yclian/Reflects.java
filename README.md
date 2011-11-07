@@ -16,7 +16,7 @@ To begin, make sure Ruby, gem, bundler, etc. are ready.
 Use
 ---
 
-Refer to the `my.jug.reflect.ReflectsTest` for now.
+Refer to the `my.jug.reflects.ReflectsTest` for now.
 
 [1]: http://buildr.apache.org/installing.html
 [2]: http://stackoverflow.com/questions/6897340/unable-to-run-buildr-on-windows/8031575#8031575   "StackOverflow - Unable to run BuildR on Windows"
