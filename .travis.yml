@@ -1,4 +1,4 @@
-rvm: 1.8.7
+rvm: jruby
 env: JAVA_HOME=/usr
 script: "bundle exec buildr clean package"
 
