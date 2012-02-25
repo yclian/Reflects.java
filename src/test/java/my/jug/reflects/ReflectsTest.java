@@ -22,7 +22,7 @@ import org.junit.Test;
 /**
  * @author yclian
  * @since 1.0.20111104
- * @version 1.0.20111107
+ * @version 1.0.20120225
  */
 public class ReflectsTest {
 
@@ -33,12 +33,20 @@ public class ReflectsTest {
 
     @SuppressWarnings("unused")
     static interface Interface extends Serializable {
+        
+        static String staticField = "";
 
         @Annotation("foo")
         void Method();
     }
 
     static class Class implements Interface {
+        
+        public static String staticField = "";
+        
+        private static String privateStaticField = "";
+        
+        public String field = "";
 
         public static void StaticMethod() {}
 
@@ -69,10 +77,21 @@ public class ReflectsTest {
     public void testOnClassByNameNotFound() throws ClassNotFoundException {
         onClass("Interface");
     }
+    
+    @Test
+    public void testOnFieldOfName() {
+        assertEquals(1, onClass(Class.class).onFields().filter(fieldOfName("field")).size());
+        assertEquals(1, onClass(Class.class).onFields(true, false, true, false).filter(fieldOfName("staticField")).size());
+        assertEquals(2, onClass(Class.class).onFields(true, false, true, true).filter(fieldOfName("staticField")).size());
+        assertEquals(3, onClass(Class.class).onFields(true, true, true, true).filter(fieldOfName(".*[sS]taticField")).size());
+    }
 
     @Test
     public void testOnMethodOfName() {
         assertEquals(1, onClass(Class.class).onMethods().filter(methodOfName("Method")).size());
+        assertEquals(0, onClass(Class.class).onMethods().filter(methodOfName("StaticMethod")).size());
+        assertEquals(1, onClass(Class.class).onMethods(true, false, true, false).filter(methodOfName(".*StaticMethod")).size());
+        assertEquals(2, onClass(Class.class).onMethods(true, true, true, false).filter(methodOfName(".*StaticMethod")).size());
     }
 
     @Test
@@ -93,10 +112,10 @@ public class ReflectsTest {
     @Test
     public void testOnStaticMethods() {
 
-        assertEquals(2, onClass(Class.class).onMethods(false, true, false, false).filter(and(staticMethod())).size());
+        assertEquals(2, onClass(Class.class).onMethods(false, true, true, false).filter(and(staticMethod())).size());
 
-        assertEquals(1, onClass(Class.class).onMethods(false, true, false, true).filter(and(staticMethod(), not(publicMethod()))).size());
-        assertEquals(1, onClass(Class.class).onMethods(false, true, false, false).filter(and(staticMethod(), not(publicMethod()))).size());
+        assertEquals(1, onClass(Class.class).onMethods(false, true, true, true).filter(and(staticMethod(), not(publicMethod()))).size());
+        assertEquals(1, onClass(Class.class).onMethods(false, true, true, false).filter(and(staticMethod(), not(publicMethod()))).size());
     }
 
     @Test
