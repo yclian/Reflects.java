@@ -22,7 +22,7 @@ import org.junit.Test;
 /**
  * @author yclian
  * @since 1.0.20111104
- * @version 1.0.20111107
+ * @version 1.0.20120225
  */
 public class ReflectsTest {
 
@@ -93,10 +93,10 @@ public class ReflectsTest {
     @Test
     public void testOnStaticMethods() {
 
-        assertEquals(2, onClass(Class.class).onMethods(false, true, false, false).filter(and(staticMethod())).size());
+        assertEquals(2, onClass(Class.class).onMethods(false, true, true, false).filter(and(staticMethod())).size());
 
-        assertEquals(1, onClass(Class.class).onMethods(false, true, false, true).filter(and(staticMethod(), not(publicMethod()))).size());
-        assertEquals(1, onClass(Class.class).onMethods(false, true, false, false).filter(and(staticMethod(), not(publicMethod()))).size());
+        assertEquals(1, onClass(Class.class).onMethods(false, true, true, true).filter(and(staticMethod(), not(publicMethod()))).size());
+        assertEquals(1, onClass(Class.class).onMethods(false, true, true, false).filter(and(staticMethod(), not(publicMethod()))).size());
     }
 
     @Test

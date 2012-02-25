@@ -1,17 +1,16 @@
 package my.jug.reflects;
 
+import static com.google.common.base.Predicates.and;
+import static com.google.common.base.Predicates.not;
 import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
 import static java.util.Arrays.asList;
-import static my.jug.reflects.Reflects.Predicates.methodOfSignature;
-import static my.jug.reflects.Reflects.Predicates.publicMethod;
-import static my.jug.reflects.Reflects.Predicates.staticMethod;
+import static my.jug.reflects.Reflects.Predicates.*;
 
 import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.*;
 
 import com.google.common.base.Function;
@@ -23,7 +22,7 @@ import com.google.common.collect.Collections2;
  *
  * @author yclian
  * @since 1.0.20111103
- * @version 1.0.20111107
+ * @version 1.0.20120225
  */
 public abstract class Reflects {
 
@@ -196,7 +195,17 @@ public abstract class Reflects {
                 p = publicMethod();
             }
             if (includeStatic) {
-                p = null == p ? staticMethod() : com.google.common.base.Predicates.<Method>and(p, staticMethod());
+                if (null == p) {
+                    p = staticMethod();
+                } else {
+                    p = and(p, staticMethod());
+                }
+            } else {
+                if (null == p) {
+                    p = not(staticMethod());
+                } else {
+                    p = and(p, not(staticMethod()));
+                }
             }
 
             if (null == p) {
@@ -205,7 +214,6 @@ public abstract class Reflects {
                 methods.addAll(Reflects.onMethods(c.getDeclaredMethods()).filter(p));
             }
         }
-
 
         private List<Class<?>> getInterfaces(boolean includeInherited, boolean includeSelf) {
 
