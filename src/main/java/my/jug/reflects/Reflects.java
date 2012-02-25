@@ -10,6 +10,7 @@ import static my.jug.reflects.Reflects.Predicates.*;
 import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -20,6 +21,15 @@ import com.google.common.collect.Collections2;
 /**
  * <p>Reflection utility class, to traverse, filter and trasnform reflection objects.</p>
  *
+ * <h3>Changes</h3>
+ * <h4>1.0-SNAPSHOT</h4>
+ * <dl>
+ *     <dt>2011-11</dt>
+ *     <dd>Inception of project. See {@link #onMethod(java.lang.reflect.Method)} and {@link #onMethods(java.lang.reflect.Method...)}.</dd>
+ *     <dt>2012-02-25</dt>
+ *     <dd>Add support for fields (identical with how methods are handled). See {@link #onField(java.lang.reflect.Field)} and {@link #onFields(java.lang.reflect.Field...)}.</dd>
+ * </dl>
+ *
  * @author yclian
  * @since 1.0.20111103
  * @version 1.0.20120225
@@ -27,6 +37,13 @@ import com.google.common.collect.Collections2;
 public abstract class Reflects {
 
     protected Reflects() {}
+
+    private static interface HasFields {
+
+        OnFields onFields();
+
+        OnFields onFields(boolean includeInherited, boolean includeNonPublic, boolean includeStatic, boolean includeInterfaces);
+    }
 
     private static interface HasMethods {
 
@@ -103,7 +120,7 @@ public abstract class Reflects {
      */
     public static class OnPackages {}
 
-    public static class OnClass implements HasMethods, HasAnnotations {
+    public static class OnClass implements HasFields, HasMethods, HasAnnotations {
 
         private Class<?> c;
 
@@ -154,6 +171,68 @@ public abstract class Reflects {
         public OnClasses onSuperClasses() {
             return Reflects.onClasses(getSuperClasses());
         }
+
+        public OnFields onFields() {
+            return onFields(true, false, false, false);
+        }
+        
+        public OnFields onFields(boolean includeInherited, boolean includeNonPublic, boolean includeStatic, boolean includeInterfaces) {
+            
+            Set<Field> fields = new LinkedHashSet<Field>();
+
+            if (!c.isInterface()) {
+                if (includeInherited) {
+                    for (Class<?> c: onClasses(false, true).get()) {
+                        exportFields(fields, c, includeNonPublic, includeStatic);
+                    }
+                } else {
+                    exportFields(fields, c, includeNonPublic, includeStatic);
+                }
+            }
+
+            if (c.isInterface() || includeInterfaces) {
+
+                if (includeInherited) {
+                    for (Class<?> i: onInterfaces(includeInherited, true).get()) {
+                        exportFields(fields, i, includeNonPublic, includeStatic);
+                    }
+                } else {
+                    exportFields(fields, c, includeNonPublic, includeStatic);
+                }
+            }
+
+            return Reflects.onFields(new ArrayList<Field>(fields));
+            
+        }
+
+        private void exportFields(Collection<Field> fields, Class<?> c, boolean includeNonPublic, boolean includeStatic) {
+
+            Predicate<Field> p = null;
+
+            if (!includeNonPublic) {
+                p = publicField();
+            }
+            if (includeStatic) {
+                if (null == p) {
+                    p = staticField();
+                } else {
+                    p = and(p, staticField());
+                }
+            } else {
+                if (null == p) {
+                    p = not(staticField());
+                } else {
+                    p = and(p, not(staticField()));
+                }
+            }
+
+            if (null == p) {
+                exportElements(fields, c.getDeclaredFields());
+            } else {
+                fields.addAll(Reflects.onFields(c.getDeclaredFields()).filter(p));
+            }
+        }
+
 
         public OnMethods onMethods() {
             return onMethods(true, false, false, false);
@@ -273,12 +352,24 @@ public abstract class Reflects {
         }
     }
 
-    public static class OnClasses implements AnnotatableCollection<Class<?>>, HasMethods, HasAnnotations {
+    public static class OnClasses implements AnnotatableCollection<Class<?>>, HasFields, HasMethods, HasAnnotations {
 
         private List<Class<?>> classes;
 
         OnClasses(List<Class<?>> classes) {
             this.classes = classes;
+        }
+
+        public OnFields onFields() {
+            return onFields(true, false, false, false);
+        }
+        
+        public OnFields onFields(boolean includeInherited, boolean includeNonPublic, boolean includeStatic, boolean includeInterfaces) {
+            List<Field> r = new ArrayList<Field>();
+            for (Class<?> c: classes) {
+                r.addAll(Reflects.onClass(c).onFields(includeInherited, includeNonPublic, includeStatic, includeInterfaces).get());
+            }
+            return Reflects.onFields(r);
         }
 
         @Override
@@ -334,6 +425,81 @@ public abstract class Reflects {
         @Override
         public <O> List<O> transform(Function<? super Class<?>, O> f) {
             return transformAsList(classes, f);
+        }
+    }
+    
+    public static class OnField implements HasAnnotations {
+        
+        Field field;
+        
+        OnField(Field field) {
+            this.field = field;
+        }
+
+        public OnAnnotations onAnnotations() {
+            return onAnnotations(true);
+        }
+
+        public OnAnnotations onAnnotations(boolean includeInherited) {
+            if (includeInherited) {
+                List<Annotation> r = new ArrayList<Annotation>();
+                for (Field f: Reflects.onClass(field.getDeclaringClass()).onFields(true, !isPublic(field.getModifiers()), isStatic(field.getModifiers()), true).get()) {
+                    exportElements(r, f.getDeclaredAnnotations());
+                }
+                return Reflects.onAnnotations(r);
+            } else {
+                return Reflects.onAnnotations(field.getDeclaredAnnotations());
+            }
+        }
+    }
+    
+    public static class OnFields implements AnnotatableCollection<Field>, HasAnnotations {
+
+        List<Field> fields;
+
+        OnFields(List<Field> fields) {
+            this.fields = fields;
+        }
+
+        @Override
+        public OnAnnotations onAnnotations() {
+            return onAnnotations(true);
+        }
+
+        @Override
+        public OnAnnotations onAnnotations(boolean includeInherited) {
+            Set<Annotation> r = new LinkedHashSet<Annotation>();
+            for (Field f: fields) {
+                r.addAll(Reflects.onField(f).onAnnotations(includeInherited).get());
+            }
+            return Reflects.onAnnotations(new ArrayList<Annotation>(r));
+        }
+
+        public <O> List<O> transform(Function<? super Field, O> f) {
+            return transformAsList(fields, f);
+        }
+
+        public List<Field> get() {
+            return fields;
+        }
+
+        @Override
+        public Field seek(Predicate<? super Field> predicate) {
+            return seekElement(fields, predicate);
+        }
+
+        public List<Field> filter(final Class<? extends Annotation> a) {
+            return filterAsList(fields, a);
+        }
+
+        public List<Field> filter(final String regex) {
+            return filter(new Predicate<Field>() { @Override public boolean apply(@Nullable Field input) {
+                return input != null && input.getName().matches(regex);
+            }});
+        }
+
+        public List<Field> filter(Predicate<? super Field> predicate) {
+            return filterAsList(fields, predicate);
         }
     }
 
@@ -455,6 +621,19 @@ public abstract class Reflects {
      */
     public static final class Predicates {
 
+        private static final Predicate<Field> PUBLIC_FIELD = new Predicate<Field>() { @Override public boolean apply(@Nullable Field f) {
+            return null != f && isPublic(f.getModifiers());
+        }};
+        private static final Predicate<Field> OBJECT_FIELD = new Predicate<Field>() { @Override public boolean apply(@Nullable Field field) {
+            return null != field && field.getDeclaringClass().equals(Object.class);
+        }};
+        private static final Predicate<Field> INSTANCE_FIELD = new Predicate<Field>() { @Override public boolean apply(@Nullable Field field) {
+            return null != field && !isStatic(field.getModifiers());
+        }};
+        private static final Predicate<Field> STATIC_FIELD = new Predicate<Field>() { @Override public boolean apply(@Nullable Field field) {
+            return null != field && isStatic(field.getModifiers());
+        }};
+
         private static final Predicate<Method> PUBLIC_METHOD = new Predicate<Method>() { @Override public boolean apply(@Nullable Method m) {
             return null != m && isPublic(m.getModifiers());
         }};
@@ -478,6 +657,34 @@ public abstract class Reflects {
             return new Predicate<Class<?>>() { @Override public boolean apply(@Nullable Class<?> c) {
                 return null != c && c.getName().matches(regex);
             }};
+        }
+
+        public static Predicate<Field> fieldAnnotatedWith(final Class<? extends Annotation> annotation) {
+            return new Predicate<Field>() { @Override public boolean apply(@Nullable Field field) {
+                return null != field && field.isAnnotationPresent(annotation);
+            }};
+        }
+
+        public static Predicate<Field> fieldOfName(final String regex) {
+            return new Predicate<Field>() { @Override public boolean apply(@Nullable Field m) {
+                return null != m && m.getName().matches(regex);
+            }};
+        }
+
+        public static Predicate<Field> instanceField() {
+            return INSTANCE_FIELD;
+        }
+
+        public static Predicate<Field> publicField() {
+            return PUBLIC_FIELD;
+        }
+
+        public static Predicate<Field> objectField() {
+            return OBJECT_FIELD;
+        }
+
+        public static Predicate<Field> staticField() {
+            return STATIC_FIELD;
         }
 
         public static Predicate<Method> methodAnnotatedWith(final Class<? extends Annotation> annotation) {
@@ -590,6 +797,18 @@ public abstract class Reflects {
      */
     public static OnClasses onClasses(List<Class<?>> classes) {
         return new OnClasses(classes);
+    }
+    
+    public static OnField onField(Field field) {
+        return new OnField(field);
+    }
+    
+    public static OnFields onFields(Field... fields) {
+        return onFields(asList(fields));
+    }
+    
+    public static OnFields onFields(List<Field> fields) {
+        return new OnFields(fields);
     }
 
     public static OnMethod onMethod(Method method) {
